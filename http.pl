@@ -1,4 +1,4 @@
-#!/usr/bin/perl !!!!!!!1
+#!/usr/bin/perl
 use strict;
 use warnings;
 use LWP::UserAgent;
@@ -29,3 +29,4 @@ else {
 print $res->status_line, "\n";
 }
 ;
+my $wait = (<STDIN>); 
