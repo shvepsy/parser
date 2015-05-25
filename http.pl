@@ -6,10 +6,13 @@ use HTTP::Cookies;
 require HTTP::Request;
 my $site = shift;
 
-#$print("$var1 $var2 $var3\n");
+if (defined $site == 0) {
+  print "Enter site URL: ";
+  $site = (<STDIN>);
+};
+
 #on what site
 my $pr = (print"Site: $site\n");
-#my $site=(<STDIN>);
 
 #init uagent
 my $ua = LWP::UserAgent->new;
@@ -29,4 +32,5 @@ else {
 print $res->status_line, "\n";
 }
 ;
-my $wait = (<STDIN>); 
+#windows win+R wait
+my $wait = (<STDIN>);
