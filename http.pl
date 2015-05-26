@@ -26,7 +26,10 @@ my $res = $ua->request($req);
 
 #check response
 if ($res->is_success) {
-print $res->content;
+my $rez = $res->content;
+#print "$rez\n\n";
+$rez =~ s|><|>\n<|g ;
+print "$rez";
 }
 else {
 print $res->status_line, "\n";
