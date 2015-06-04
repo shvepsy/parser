@@ -5,7 +5,7 @@ use File::Tail;
 use Digest::MD5 qw(md5 md5_hex md5_base64);
 my $ct = 0;
 #my @ips2000;
-
+my %hash;
 my $lflow = File::Tail->new(name      => "/var/log/nginx/access.host.log",
                       interval      => 0.1,
                       maxinterval   => 0.5,
@@ -16,15 +16,16 @@ while (defined(my $line= $lflow->read)) {
    my ($domain, $req_time, $req_ip, $date, $URL, $resp_st, $size, $ref, $ua ) = $line =~
    m/^"(\S+)" - (\S+) (\S+) - - \[(.*)] "(.*)" (\d+) (\d+) "(.*)" "(.*)"/;
 
-   my %hash = ( $ct => {
+   %hash = ( %hash,$ct => {
      domain  => $domain,
      ip      => $req_ip,
      req     => $URL,
      ua      => $ua,
    },
    );
-print $hash{$ct}->{ip}."\n";
-   if ($ct >= 20) {
+
+#print $hash{$ct}->{ip}."\n";
+   if ($ct >= 200) {
      $ct = 0;
      foreach my $key ( sort sort_func keys %hash) {
        print $hash{$key}->{domain}." ".$hash{$key}->{ip}." ".$hash{$key}->{req}." ".$hash{$key}->{ua}."\n";
@@ -36,7 +37,7 @@ print $hash{$ct}->{ip}."\n";
    #foreach my $value(values %hash) {
   #   print "$value\n";
   # };
-  # exit 0;
+  exit 0;
    };
    $ct++;
  };
