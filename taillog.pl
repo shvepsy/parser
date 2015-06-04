@@ -15,20 +15,21 @@ while (defined(my $line= $lflow->read)) {
    #print "$line";
    my ($domain, $req_time, $req_ip, $date, $URL, $resp_st, $size, $ref, $ua ) = $line =~
    m/^"(\S+)" - (\S+) (\S+) - - \[(.*)] "(.*)" (\d+) (\d+) "(.*)" "(.*)"/;
-
+   my $md5 = md5_base64("$URL,$ua");
    %hash = ( %hash,$ct => {
      domain  => $domain,
      ip      => $req_ip,
      req     => $URL,
      ua      => $ua,
+     md      => $md5,
    },
    );
 
 #print $hash{$ct}->{ip}."\n";
-   if ($ct >= 200) {
+   if ($ct >= 500) {
      $ct = 0;
      foreach my $key ( sort sort_func keys %hash) {
-       print $hash{$key}->{domain}." ".$hash{$key}->{ip}." ".$hash{$key}->{req}." ".$hash{$key}->{ua}."\n";
+       print $hash{$key}->{domain}." ".$hash{$key}->{ip}." ".$hash{$key}->{md}."\n";
      }
      sub sort_func { $hash{$a}->{domain} cmp $hash{$b}->{domain} ||
      $hash{$a}->{ip} cmp $hash{$b}->{ip};
