@@ -4,8 +4,9 @@ use warnings;
 use File::Tail;
 use Digest::MD5 qw(md5 md5_hex md5_base64);
 my $ct = 0;
-#my @ips2000;
+my $border = 50; #
 my %hash;
+my %hs;
 my $count;
 my $txt = "";
 my $pr = "";
@@ -27,7 +28,7 @@ while (defined(my $line= $lflow->read)) {
    },
    );
    $ct++;
-   if ($ct >= 1000) {
+   if ($ct >= 10000) {
      $ct = 0;
      foreach my $key ( sort sort_func keys %hash) {
        $txt = $txt.$hash{$key}->{domain}." ".$hash{$key}->{ip}." ".$hash{$key}->{md}."\n";
@@ -41,8 +42,12 @@ while (defined(my $line= $lflow->read)) {
         $pr = $pr.$hash{$ks}->{ip}." ".$count."\n";
       }
       $pr =~ s/\S+\s\n//g ;
-      #split ( /\n/, $pr)
+      #my @toban = $pr =~ m/\S+\s[5-9][0-9]\n/ ;
+      #my @print = split ( /\n/, $pr);
+    #  my ($hs{ip},$hs{count}) = $pr =~ m/(S+)\s(\D+)/g;
+      #$pr = sort
       print $pr;
+      #print "2ban:@toban";
     exit 0;
    };
  };
