@@ -17,6 +17,11 @@ sub parse {
   #init uagent
   my $ua = LWP::UserAgent->new;
   $ua->agent("ChromeFrome/0.1");
+  $ua->cookie_jar( {} );
+#  my $cookie_jar = HTTP:Cookies->new(
+#    file => "$ENV{'HOME'}/lwp_coockie.dat",
+#    autosave => 1,
+#    );
 
   #Go request
   my $req = HTTP::Request->new(GET => "http://$site");
