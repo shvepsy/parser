@@ -5,7 +5,7 @@ use warnings;
 use IO::Socket;
 #SocClient
 
-my $host="localhost";
+my $host="10.10.100.240";
 my $port="8888";
 
 my $socket = IO::Socket::INET->new(
