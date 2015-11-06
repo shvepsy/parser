@@ -45,13 +45,17 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
    # execute
    if ($req_method eq "check" ) {
      my (@ipset) = Check($req_ip);
-     my $time = strftime "%e %b %H:%M:%S %Y", localtime;
-     print LOG "$time - $client_ip - $req_method $ipset[0] $ipset[1]\n";
-     print NEW_SOCKET "$ipset[1] banned in $ipset[0] table.\n";
+     while (@ipset) {
+       my $table = shift @ipset;
+       my $bndip = shift @ipset;
+       my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+       print LOG "$time - $client_ip - $req_method $table $bndip\n";
+       print NEW_SOCKET "$bndip banned in $table table.\n";
+     }
     }
     elsif ($req_method eq "del" ) {
-      my ($del,@ipset) = Delete($req_ip);
-      if (!$del) {my $time = strftime "%e %b %H:%M:%S %Y", localtime; print LOG "$time - $client_ip - $req_method   $ipset[0] $ipset[1]\n"; print NEW_SOCKET "Unbanned!\n";} else {print NEW_SOCKET "ERROR:ban\n"};
+      my ($del,@ipset) = Delete($req_ip,$client_ip,$req_method);
+      if (!$del) {print NEW_SOCKET "Unbanned!\n";} else {print NEW_SOCKET "ERROR:ban\n"};
     }
     else  { print NEW_SOCKET "ERROR: Case\n" }
    close NEW_SOCKET;
@@ -64,10 +68,7 @@ sub Check {
   my ($req_ip) = @_;
   my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
   my @ipset = `$cmd`;
-  print @ipset;
-  print $#ipset;
-  my $c = $#ipset;
-  print "\'$c\'" ;
+
   if (!$ipset[1] or $ipset[1] !~ /$req_ip\,/ ) { print NEW_SOCKET "Not banned.\n"; close NEW_SOCKET; next }
   chomp (@ipset);
   return @ipset;
@@ -75,9 +76,17 @@ sub Check {
 
 # func Delete: ipset del tablename hash from @ipset
 sub Delete {
-  my ($req_ip) = @_;
+  my ($req_ip,$client_ip,$req_method) = @_;
+  my $del;
   my (@ipset) = Check($req_ip);
-  my $cmd = "$delpath $ipset[0] $ipset[1]";
-  my $del = `$cmd`;
+  while (@ipset) {
+    my $table = shift @ipset;
+    my $bndip = shift @ipset;
+    my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+    print LOG "$time - $client_ip - $req_method  $table $bndip\n";
+    my $cmd = "$delpath $table $bndip";
+    $del = `$cmd`;
+    print $del;
+  }
   return $del, @ipset;
 }
