@@ -24,14 +24,15 @@ bind( SOCKET, pack_sockaddr_in($port, inet_aton($server)))
 listen(SOCKET, SOMAXCONN) or die "listen: $!";
 
 open (LOG, ">>$logpath") or die "Cannot open $logpath: $!";
+
 my $time = strftime "%e %b %H:%M:%S %Y", localtime;
 print LOG "$time\tServer started on port $port\n";
 LOG->flush();
 
 # accepting a connection
 my $client_addr;
-while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
-
+while ($client_addr = accept(NEW_SOCKET, SOCKET))
+{
    # send them a message, close connection
    my ($clinet_port,$client_ipn) = sockaddr_in($client_addr);
    my $client_ip = inet_ntoa($client_ipn);
@@ -39,9 +40,16 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
    my ($req_method, $req_ip ) = split(" ", $data) ;
 
    # verification received data
-   unless ($req_method eq "check"||$req_method eq "del") { print NEW_SOCKET "ERROR: Invalid method\n"; close NEW_SOCKET; next; };
-   unless ($req_ip=~/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/ &&(($1<=255  && $2<=255 && $3<=255  &&$4<=255 ))) { print NEW_SOCKET "ERROR: Invalid IP\n"; close NEW_SOCKET; next; };
-
+   unless ($req_method eq "check"||$req_method eq "del") {
+     print NEW_SOCKET "ERROR: Invalid method\n";
+     close NEW_SOCKET;
+     next;
+     };
+   unless ($req_ip=~/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/ &&(($1<=255  && $2<=255 && $3<=255  &&$4<=255 ))) {
+    print NEW_SOCKET "ERROR: Invalid IP\n";
+    close NEW_SOCKET;
+    next;
+    };
    # execute
    if ($req_method eq "check" ) {
      my (@ipset) = Check($req_ip);
@@ -65,18 +73,25 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
 close LOG;
 
 # func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
-sub Check {
+sub Check
+{
   my ($req_ip) = @_;
   my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
   my @ipset = `$cmd`;
 
-  if (!$ipset[1] or $ipset[1] !~ /$req_ip\,/ ) { print NEW_SOCKET "Not banned.\n"; close NEW_SOCKET; next }
+  if (!$ipset[1] or $ipset[1] !~ /$req_ip\,/ )
+  {
+    print NEW_SOCKET "Not banned.\n";
+    close NEW_SOCKET;
+    next
+    }
   chomp (@ipset);
   return @ipset;
-  }
+}
 
-# func Delete: ipset del tablename hash from @ipset
-sub Delete {
+# func Delete: "ipset del tablename hash" from @ipset
+sub Delete
+{
   my ($req_ip,$client_ip,$req_method) = @_;
   my $del;
   my $table;
