@@ -44,8 +44,8 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
 
    # execute
    if ($req_method eq "check" ) {
-     my @ipset = Check($req_ip);
-     my $time = strftime "%e %b %H:%M:%S %Y", localtime;;
+     my (@ipset) = Check($req_ip);
+     my $time = strftime "%e %b %H:%M:%S %Y", localtime;
      print LOG "$time - $client_ip - $req_method $ipset[0] $ipset[1]\n";
      print NEW_SOCKET "$ipset[1] banned in $ipset[0] table.\n";
     }
@@ -62,14 +62,18 @@ close LOG;
 # func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
 sub Check {
   my ($req_ip) = @_;
-  my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\' | head -n 2";
+  my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
   my @ipset = `$cmd`;
+  print @ipset;
+  print $#ipset;
+  my $c = $#ipset;
+  print "\'$c\'" ;
   if (!$ipset[1] or $ipset[1] !~ /$req_ip\,/ ) { print NEW_SOCKET "Not banned.\n"; close NEW_SOCKET; next }
-  chomp ($ipset[0],$ipset[1]);
+  chomp (@ipset);
   return @ipset;
   }
 
-# func Delete: ipset del tablename hash from $req_ip
+# func Delete: ipset del tablename hash from @ipset
 sub Delete {
   my ($req_ip) = @_;
   my (@ipset) = Check($req_ip);
