@@ -49,7 +49,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
     }
     elsif ($req_method eq "del" ) {
       my ($del,@ipset) = Delete($req_ip);
-      if (!$del) {my $time = strftime "%e %b %H:%M:%S %Y", localtime; print LOG "$time - $client_ip - $req_method   $ipset[0] $ipset[1]\n"; print NEW_SOCKET "Unbanned!\n";} else {};
+      if (!$del) {my $time = strftime "%e %b %H:%M:%S %Y", localtime; print LOG "$time - $client_ip - $req_method   $ipset[0] $ipset[1]\n"; print NEW_SOCKET "Unbanned!\n";} else {print NEW_SOCKET "ERROR:ban\n"};
     }
     else  { print NEW_SOCKET "ERROR: Case\n" }
    close NEW_SOCKET;
@@ -57,7 +57,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
 }
 close LOG;
 
-#func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
+# func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
 sub Check {
   my ($req_ip) = @_;
   my $cmd = "ipset -L | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\' | head -n 2";
@@ -67,7 +67,7 @@ sub Check {
   return @ipset;
   }
 
-#funk Delete:
+# func Delete: ipset del tablename hash from $req_ip
 sub Delete {
   my ($req_ip) = @_;
   my (@ipset) = Check($req_ip);
