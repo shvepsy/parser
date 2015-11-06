@@ -57,7 +57,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
 }
 close LOG;
 
-#subs Check and Delete->Check
+#func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
 sub Check {
   my ($req_ip) = @_;
   my $cmd = "ipset -L | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\' | head -n 2";
@@ -67,6 +67,7 @@ sub Check {
   return @ipset;
   }
 
+#funk Delete:
 sub Delete {
   my ($req_ip) = @_;
   my (@ipset) = Check($req_ip);
