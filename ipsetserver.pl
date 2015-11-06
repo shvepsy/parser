@@ -45,8 +45,9 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
    # execute
    if ($req_method eq "check" ) {
      my (@ipset) = Check($req_ip);
+     my $table;
      while (@ipset) {
-       my $table = shift @ipset;
+       $table = shift @ipset if $ipset[0] =~ /^BAN/ ;
        my $bndip = shift @ipset;
        my $time = strftime "%e %b %H:%M:%S %Y", localtime;
        print LOG "$time - $client_ip - $req_method $table $bndip\n";
@@ -78,15 +79,15 @@ sub Check {
 sub Delete {
   my ($req_ip,$client_ip,$req_method) = @_;
   my $del;
+  my $table;
   my (@ipset) = Check($req_ip);
   while (@ipset) {
-    my $table = shift @ipset;
+    $table = shift @ipset if $ipset[0] =~ /^BAN/;
     my $bndip = shift @ipset;
     my $time = strftime "%e %b %H:%M:%S %Y", localtime;
     print LOG "$time - $client_ip - $req_method  $table $bndip\n";
     my $cmd = "$delpath $table $bndip";
     $del = `$cmd`;
-    print $del;
   }
   return $del, @ipset;
 }
