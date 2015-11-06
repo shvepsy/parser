@@ -8,6 +8,8 @@ my $port = shift || 4444;
 my $proto = getprotobyname('tcp');
 my $server = "10.10.100.61";
 my $logpath = "/var/log/unban.log";
+my $listpath = "ipset -L";
+my $delpath = "ipset del";
 
 # create a socket
 socket(SOCKET, PF_INET, SOCK_STREAM, $proto)
@@ -60,7 +62,7 @@ close LOG;
 # func Check: getting ipset tablename and hash:ip,port,ip int @ipset for check or delete from table
 sub Check {
   my ($req_ip) = @_;
-  my $cmd = "ipset -L | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\' | head -n 2";
+  my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\' | head -n 2";
   my @ipset = `$cmd`;
   if (!$ipset[1] or $ipset[1] !~ /$req_ip\,/ ) { print NEW_SOCKET "Not banned.\n"; close NEW_SOCKET; next }
   chomp ($ipset[0],$ipset[1]);
@@ -71,7 +73,7 @@ sub Check {
 sub Delete {
   my ($req_ip) = @_;
   my (@ipset) = Check($req_ip);
-  my $cmd = "ipset del $ipset[0] $ipset[1]";
+  my $cmd = "$delpath $ipset[0] $ipset[1]";
   my $del = `$cmd`;
   return $del, @ipset;
 }
