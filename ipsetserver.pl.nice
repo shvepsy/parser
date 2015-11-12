@@ -59,14 +59,20 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
    if ($req_method eq "check" )
    {
      my (@ipset) = Check($req_ip);
-     my $table;
+     my ($table,@uniqp);
      while (@ipset)
      {
        $table = shift @ipset if $ipset[0] =~ /^BAN/ ;
        my $bndip = shift @ipset;
        my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+       foreach $a (@uniqp) {
+        goto MARK if $a =~ /$bndip $table/ ;
+       }
+       push @uniqp, ("$bndip $table");
        print LOG "$time - $client_ip - $req_method $table $bndip\n";
        print NEW_SOCKET "$bndip banned in $table table.\n";
+       MARK:
+       next
      }
    }
    elsif ($req_method eq "del")
@@ -96,7 +102,6 @@ sub Check
   my ($req_ip) = @_;
   my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
   my @ipset = `$cmd`;
-
   if (!$ipset[1] or $ipset[1] !~ /$req_ip/ )
   {
     print NEW_SOCKET "Not banned.\n";
@@ -111,16 +116,22 @@ sub Check
 sub Delete
 {
   my ($req_ip,$client_ip,$req_method) = @_;
-  my ($table,$del);
+  my ($table,$del,@uniqd);
   my (@ipset) = Check($req_ip);
   while (@ipset)
   {
     $table = shift @ipset if $ipset[0] =~ /^BAN/;
     my $bndip = shift @ipset;
+    foreach $b (@uniqd) {
+     goto MARK2 if $b =~ /$bndip $table/ ;
+    }
+    push @uniqd, ("$bndip $table");
     my $time = strftime "%e %b %H:%M:%S %Y", localtime;
     print LOG "$time - $client_ip - $req_method  $table $bndip\n";
     my $cmd = "$delpath $table $bndip";
     $del = `$cmd`;
+    MARK2:
+    next
   }
   return $del, @ipset;
 }
