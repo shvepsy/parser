@@ -1,0 +1,162 @@
+#!/usr/bin/env perl
+use strict;
+use Socket;
+use POSIX qw(strftime);
+use IO::Socket::INET;
+
+# use port 4444 as default
+my $port = shift || 4444;
+my $proto = getprotobyname('tcp');
+my $server = "10.10.100.61";
+my $logpath = "/var/log/unban.log";
+my $listpath = "ipset -L";
+my $delpath = "ipset del";
+
+my $io = new IO::Socket::INET(
+  LocalHost => $server,
+  LocalPort => $port,
+  Proto => 'tcp',
+  Listen => 5,
+  Timeout => 2,
+  Reuse => 1
+  );
+
+
+# create a socket
+socket(SOCKET, PF_INET, SOCK_STREAM, $proto)
+ or die "Can't open socket $!\n";
+setsockopt(SOCKET, SOL_SOCKET, SO_REUSEADDR, 1)
+ or die "Can't set socket option to SO_REUSEADDR $!\n";
+
+# bind to a port
+bind(SOCKET, pack_sockaddr_in($port, inet_aton($server)))
+ or die "Can't bind to port $port! \n";
+
+listen(SOCKET, SOMAXCONN) or die "listen: $!";
+
+# log open
+open(LOG, ">>$logpath") or die "Cannot open $logpath: $!";
+
+my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+print LOG "$time - Server started on port $port\n";
+LOG->flush();
+close STDOUT;
+close STDERR;
+
+# accepting a connection
+my $client_addr;
+while ($client_addr = accept(NEW_SOCKET, SOCKET))
+{
+   # receive client ip, check/delete method and ip
+   my ($clinet_port,$client_ipn) = sockaddr_in($client_addr);
+   my $client_ip = inet_ntoa($client_ipn);
+   my $data = <NEW_SOCKET>;
+   close NEW SOCKET if (!$data);
+   my ($req_method, $req_ip) = split(" ", $data) ;
+
+   # verification received data (method, ip validate and chech client network)
+   unless ($req_method eq "check"||$req_method eq "del")
+   {
+     print NEW_SOCKET "ERROR: Invalid method\n";
+     close NEW_SOCKET;
+     next;
+   };
+   unless ($req_ip=~/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/ &&(($1<=255  && $2<=255 && $3<=255  &&$4<=255 )))
+   {
+    print NEW_SOCKET "ERROR: Invalid IP\n";
+    close NEW_SOCKET;
+    next;
+    };
+   unless ($client_ip=~/^10.*/)
+   {
+    print NEW_SOCKET "ERROR: Access denied\n";
+    close NEW_SOCKET;
+    next;
+    };
+
+   # execute
+   #  if "check" method receive table and hash string contain target ip
+   # print result in socket and log
+   if ($req_method eq "check" )
+   {
+     my (@ipset) = Check($req_ip);
+     my ($table,@uniqp);
+     while (@ipset)
+     {
+       $table = shift @ipset if $ipset[0] =~ /^BAN/ ;
+       my $bndip = shift @ipset;
+       my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+       foreach $a (@uniqp) {
+        goto MARK if $a =~ /$bndip $table/ ;
+       }
+       push @uniqp, ("$bndip $table");
+       print LOG "$time - $client_ip - $req_method $table $bndip\n";
+       print NEW_SOCKET "$bndip banned in $table table.\n";
+       MARK:
+       next
+     }
+   }
+
+   #  if "del" receive result from Delete func
+   # and print result to socket.
+   elsif ($req_method eq "del")
+   {
+     my ($del,@ipset) = Delete($req_ip,$client_ip,$req_method);
+     if (!$del)
+     {
+       print NEW_SOCKET "Unbanned!\n";
+     }
+     else
+     {
+       print NEW_SOCKET "ERROR: Ban\n"
+     };
+    }
+    else
+    {
+      print NEW_SOCKET "ERROR: Case\n"
+    }
+   close NEW_SOCKET;
+   LOG->flush();
+}
+close LOG;
+
+# func Check: getting ipset tablename and hash:ip,port,ip int @ipset
+# for checking or deleting from table
+sub Check
+{
+  my ($req_ip) = @_;
+  my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
+  my @ipset = `$cmd`;
+  if (!$ipset[1] or $ipset[1] !~ /$req_ip/ )
+  {
+    print NEW_SOCKET "Not banned.\n";
+    close NEW_SOCKET;
+    next
+    }
+  chomp(@ipset);
+  return @ipset;
+}
+
+# func Delete: "ipset del <tablename> <hash>" from @ipset
+sub Delete
+{
+  my ($req_ip,$client_ip,$req_method) = @_;
+  my ($table,$del,@uniqd);
+  my (@ipset) = Check($req_ip);
+  while (@ipset)
+  {
+    $table = shift @ipset if $ipset[0] =~ /^BAN/;
+    my $bndip = shift @ipset;
+    foreach $b (@uniqd) {
+     goto MARK2 if $b =~ /$bndip $table/ ;
+    }
+    push @uniqd, ("$bndip $table");
+    my $time = strftime "%e %b %H:%M:%S %Y", localtime;
+    print LOG "$time - $client_ip - $req_method  $table $bndip\n";
+    my $cmd = "$delpath $table $bndip";
+    $del = `$cmd`;
+    MARK2:
+    next
+  }
+  return $del, @ipset;
+}
