@@ -83,7 +83,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
    elsif ($req_method eq "del")
    {
      my ($del,@ipset) = Delete($req_ip,$client_ip,$req_method);
-     if ($del != "")
+     if ($del != "1")
      {
        print NEW_SOCKET "Unbanned!\n";
      }
@@ -127,7 +127,7 @@ sub Delete
   {
     $table = shift @ipset if $ipset[0] =~ /^\D+/;
     my $bndip = shift @ipset;
-    unless ($table =~ /^BAN/) { print NEW_SOCKET "Can't delete from $table\n" ; $del = ""; goto MARK2 ; }  ;
+    unless ($table =~ /^BAN/) { (print NEW_SOCKET "Can't delete from $table\n") if $del != "1" ; $del = "1"; goto MARK2 ; }  ;
     foreach $b (@uniqd) {
      goto MARK2 if $b =~ /$bndip $table/ ;
     }
