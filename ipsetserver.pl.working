@@ -67,7 +67,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
      my ($table,@uniqp);
      while (@ipset)
      {
-       $table = shift @ipset if $ipset[0] =~ /^\w+/ ;
+       $table = shift @ipset if $ipset[0] =~ /^\D+/ ;
        my $bndip = shift @ipset;
        my $time = strftime "%e %b %H:%M:%S %Y", localtime;
        foreach $a (@uniqp) {
@@ -125,7 +125,7 @@ sub Delete
   my (@ipset) = Check($req_ip);
   while (@ipset)
   {
-    $table = shift @ipset if $ipset[0] =~ /^\w+/;
+    $table = shift @ipset if $ipset[0] =~ /^\D+/;
     my $bndip = shift @ipset;
     unless ($table =~ /^BAN/) { print NEW_SOCKET "Can't delete from $table\n" ; $del = ""; goto MARK2 ; }  ;
     foreach $b (@uniqd) {
