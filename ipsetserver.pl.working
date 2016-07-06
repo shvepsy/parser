@@ -6,24 +6,22 @@ use POSIX qw(strftime);
 # use port 4444 as default
 my $port = shift || 4444;
 my $proto = getprotobyname('tcp');
-my $server = "10.10.100.61";
+my $server = "10.0.4.54";
 my $logpath = "/var/log/unban.log";
-my $listpath = "ipset -L";
-my $delpath = "ipset del";
-
+my $listpath = "/home/firewall/firewall.sh ipset";
+my $delpath = "/home/firewall/firewall.sh ipsetdel";
 # create a socket
 socket(SOCKET, PF_INET, SOCK_STREAM, $proto)
  or die "Can't open socket $!\n";
 setsockopt(SOCKET, SOL_SOCKET, SO_REUSEADDR, 1)
  or die "Can't set socket option to SO_REUSEADDR $!\n";
 
-# bind to a port
+# bind to a port, then listen
 bind(SOCKET, pack_sockaddr_in($port, inet_aton($server)))
  or die "Can't bind to port $port! \n";
 
 listen(SOCKET, SOMAXCONN) or die "listen: $!";
 
-# log open
 open(LOG, ">>$logpath") or die "Cannot open $logpath: $!";
 
 my $time = strftime "%e %b %H:%M:%S %Y", localtime;
@@ -36,13 +34,13 @@ close STDERR;
 my $client_addr;
 while ($client_addr = accept(NEW_SOCKET, SOCKET))
 {
-   # receive client ip, check/delete method and ip
+   # receive data
    my ($clinet_port,$client_ipn) = sockaddr_in($client_addr);
    my $client_ip = inet_ntoa($client_ipn);
    my $data = <NEW_SOCKET>;
    my ($req_method, $req_ip) = split(" ", $data) ;
 
-   # verification received data (method, ip validate and chech client network)
+   # verification received data
    unless ($req_method eq "check"||$req_method eq "del")
    {
      print NEW_SOCKET "ERROR: Invalid method\n";
@@ -63,15 +61,13 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
     };
 
    # execute
-   #  if "check" method receive table and hash string contain target ip
-   # print result in socket and log
    if ($req_method eq "check" )
    {
      my (@ipset) = Check($req_ip);
      my ($table,@uniqp);
      while (@ipset)
      {
-       $table = shift @ipset if $ipset[0] =~ /^BAN/ ;
+       $table = shift @ipset if $ipset[0] =~ /^\D+/ ;
        my $bndip = shift @ipset;
        my $time = strftime "%e %b %H:%M:%S %Y", localtime;
        foreach $a (@uniqp) {
@@ -79,24 +75,21 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
        }
        push @uniqp, ("$bndip $table");
        print LOG "$time - $client_ip - $req_method $table $bndip\n";
-       print NEW_SOCKET "$bndip banned in $table table.\n";
+       print NEW_SOCKET "$bndip exist in $table table.\n";
        MARK:
        next
      }
    }
-
-   #  if "del" receive result from Delete func
-   # and print result to socket.
    elsif ($req_method eq "del")
    {
      my ($del,@ipset) = Delete($req_ip,$client_ip,$req_method);
-     if (!$del)
+     if ($del != "1")
      {
        print NEW_SOCKET "Unbanned!\n";
      }
      else
      {
-       print NEW_SOCKET "ERROR: Ban\n"
+       print NEW_SOCKET "ERROR: Deleting\n"
      };
     }
     else
@@ -108,12 +101,11 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
 }
 close LOG;
 
-# func Check: getting ipset tablename and hash:ip,port,ip int @ipset
-# for checking or deleting from table
+# func Check: getting ipset tablename and hash:ip,port,ip int @ipset for checking or deleting from table
 sub Check
 {
   my ($req_ip) = @_;
-  my $cmd = "$listpath | egrep \'Name: BAN|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
+  my $cmd = "$listpath | egrep \'Name:|$req_ip\' | sed -e \'s| timeout.*||g\' -e \'s|Name: ||g\' | grep -P \'^\\\d\+\' -B 1 | grep -v \'^--\'";
   my @ipset = `$cmd`;
   if (!$ipset[1] or $ipset[1] !~ /$req_ip/ )
   {
@@ -133,8 +125,9 @@ sub Delete
   my (@ipset) = Check($req_ip);
   while (@ipset)
   {
-    $table = shift @ipset if $ipset[0] =~ /^BAN/;
+    $table = shift @ipset if $ipset[0] =~ /^\D+/;
     my $bndip = shift @ipset;
+    unless ($table =~ /^BAN/) { (print NEW_SOCKET "Can't delete from $table\n") if $del != "1" ; $del = "1"; goto MARK2 ; }  ;
     foreach $b (@uniqd) {
      goto MARK2 if $b =~ /$bndip $table/ ;
     }

@@ -2,6 +2,7 @@
 use strict;
 use Socket;
 use POSIX qw(strftime);
+use IO::Socket::INET;
 
 # use port 4444 as default
 my $port = shift || 4444;
@@ -10,6 +11,16 @@ my $server = "10.10.100.61";
 my $logpath = "/var/log/unban.log";
 my $listpath = "ipset -L";
 my $delpath = "ipset del";
+
+my $io = new IO::Socket::INET(
+  LocalHost => $server,
+  LocalPort => $port,
+  Proto => 'tcp',
+  Listen => 5,
+  Timeout => 2,
+  Reuse => 1
+  );
+
 
 # create a socket
 socket(SOCKET, PF_INET, SOCK_STREAM, $proto)
@@ -40,6 +51,7 @@ while ($client_addr = accept(NEW_SOCKET, SOCKET))
    my ($clinet_port,$client_ipn) = sockaddr_in($client_addr);
    my $client_ip = inet_ntoa($client_ipn);
    my $data = <NEW_SOCKET>;
+   close NEW SOCKET if (!$data);
    my ($req_method, $req_ip) = split(" ", $data) ;
 
    # verification received data (method, ip validate and chech client network)
