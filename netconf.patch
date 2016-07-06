@@ -1,0 +1,6 @@
+204c204,206
+< 		    'ether-options' => { 'speed' => $speed }
+---
+>  		    'ether-options' => { 'speed' => $speed },
+>  		    'unit' => { 'name' => [ '0' ],  
+>  		        'family' => { 'ethernet-switching' =>  [ { 'operation' => 'replace', 'native-vlan-id' => { 'name' => [ "V_$vlan" ] } } ] } 
